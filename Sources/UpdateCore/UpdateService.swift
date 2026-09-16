@@ -41,7 +41,7 @@ package final class UpdateService {
             // This task does not hold the service alive across the scheduler sleep.
             while !Task.isCancelled && self != nil {
                 await self?.check(manual: false)
-                do { try await Task.sleep(for: .seconds(60)) } catch { return }
+                do { try await Task.sleep(nanoseconds: 60_000_000_000) } catch { return }
             }
         }
     }

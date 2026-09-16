@@ -58,6 +58,9 @@ jobs:
       - name: Test
         run: ./scripts/swift.sh test
 
+      - name: Test optimized suspension paths
+        run: ./scripts/swift.sh test -c release
+
       - name: Build app
         env:
           APP_VERSION: ${{ steps.version.outputs.version }}

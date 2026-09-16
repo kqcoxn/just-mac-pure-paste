@@ -38,7 +38,11 @@ final class SystemPasteEnvironment: PasteEnvironment {
         let flags = CGEventSource.flagsState(.combinedSessionState)
         return !flags.intersection([.maskShift, .maskControl, .maskAlternate, .maskCommand, .maskSecondaryFn]).isEmpty
     }
-    func wait() async throws { try await Task.sleep(for: .milliseconds(10)) }
+    func wait() async throws {
+        // Avoid the generic sleep(for:) specialization implicated in swift_task_dealloc
+        // crashes in optimized, multi-module builds (swiftlang/swift#86204).
+        try await Task.sleep(nanoseconds: 10_000_000)
+    }
     func readText() -> Result<String, PasteResultError> { clipboard.readText() }
     func writeText(_ text: String) -> Bool { clipboard.writeText(text) }
     func prepareEvents() -> Bool {

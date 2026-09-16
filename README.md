@@ -72,7 +72,7 @@ Accessibility access lets the app send the paste keystroke to your target app.
 
 Copy some text, focus the destination input field, and press **⇧⌘V**. Release the keys so the app can send the paste command.
 
-Use the menu bar’s clipboard icon → **设置…** (Settings) to change the shortcut. Clear it to pause the hotkey, or click **恢复默认** (Restore default) to return to ⇧⌘V. If another app uses the same shortcut, choose a different combination. Regular **⌘V** remains unchanged and cannot be assigned to this tool.
+Use the menu bar’s clipboard icon → **设置…** (Settings) to change the shortcut. Clear it to pause the hotkey, or click **恢复默认** (Restore default) to return to ⇧⌘V. If another app uses the same shortcut, choose a different combination. Registration failures appear in Settings and the menu bar; the app retries every two seconds, even with Settings closed. Recording blocks known system shortcut conflicts. Conflicts with other apps that intercept keyboard events cannot all be detected; change one app’s shortcut in that case. Regular **⌘V** remains unchanged and cannot be assigned to this tool.
 
 Closing Settings leaves the app running. Command-dragging the menu bar icon away only hides it; the hotkey keeps working, and the hidden state persists across launches. Open the app again to show Settings, where **在菜单栏显示图标** restores the icon. To stop the app, choose **退出 Just Pure Paste** (Quit) from the menu bar or press ⌘Q in Settings.
 

@@ -77,3 +77,15 @@
 - 分别使用构建号 1 与 2 构建，验证 CDHash 改变，但 designated requirement 保持相同，绑定开发版 Bundle ID 与同一证书。
 - `scripts/build-app.sh --release` 和 `scripts/package-release.sh local-signing-check arm64` 均通过，发布版继续使用 ad-hoc 签名。
 - 首次开发版辅助功能授权仍需用户完成；上述签名验证不代表已完成授权后跨构建的真实粘贴测试。
+
+
+## 崩溃与后台快捷键修复（2026-09-16）
+
+- 用户报告的崩溃栈为 `SystemPasteEnvironment.wait()` → 泛型 `Task.sleep(for:)` → `swift_task_dealloc` → SIGABRT，与 [Swift #86204](https://github.com/swiftlang/swift/issues/86204) 的栈一致。应用自身三处等待统一改用 `Task.sleep(nanoseconds:)`，避开该泛型特化路径并保留取消语义。这是针对已知路径的规避，不是对编译器内部根因的证明。
+- 修复前新增的真实等待路径 Release 测试也能通过，说明测试二进制没有稳定复现用户应用的崩溃；不能据此宣称彻底消除所有运行时崩溃。
+- 原先未处理 KeyboardShortcuts 的注册失败；现在设置与菜单栏报告不可用，应用持有的后台任务每两秒重试缺失的注册。健康注册不反复注销；清除快捷键后不注册。录制器阻止已知的系统快捷键冲突。
+- `JPP_RUN_HOTKEY_TESTS=1 ./scripts/swift.sh test -c release`：34 项测试通过（窗口生命周期测试未启用）。真实 Carbon 注册测试使用临时名称和不常用的组合验证占用失败、释放恢复及停止注销，不向其他应用发送按键，不读取系统剪贴板。
+- 新增真实等待与取消测试、注册失败恢复与暂停测试；CI 增加 Release 测试，避免仅验证 Debug 编译。
+- 其他程序使用事件拦截器造成的冲突无法由 Carbon 注册状态完整识别。原问题涉及的第三方应用、真实后台粘贴以及 macOS 14 / Intel 仍需实测。
+
+- Debug 同命令（不含 `-c release`）也通过 34 项测试。`./scripts/dev.sh` 已成功构建、验证签名、安装并启动 `~/Applications/Just Pure Paste Dev.app`，沿用现有开发证书。未控制第三方应用或执行真实粘贴。

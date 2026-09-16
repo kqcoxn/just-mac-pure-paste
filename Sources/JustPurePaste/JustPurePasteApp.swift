@@ -10,14 +10,6 @@ extension KeyboardShortcuts.Name {
 }
 
 @MainActor
-final class ShortcutService {
-    init(action: @escaping @MainActor () -> Void) {
-        KeyboardShortcuts.onKeyUp(for: .purePaste, action: action)
-    }
-    func reset() { KeyboardShortcuts.reset(.purePaste) }
-}
-
-@MainActor
 @Observable
 final class AppModel {
     let permission = PermissionService()
@@ -25,20 +17,33 @@ final class AppModel {
         Bundle.main.object(forInfoDictionaryKey: "JPPReleaseTag") as? String
         ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         ?? "unknown")
-    private(set) var status = "就绪"
+    private var pasteStatus = "就绪"
+    private var pasteFailed = false
+    private(set) var shortcutState: ShortcutState = .ready
+    var status: String { shortcutState == .ready ? pasteStatus : shortcutState.message }
+    var hasFailure: Bool { shortcutState == .unavailable || pasteFailed }
     private(set) var shortcutLabel = ""
-    private(set) var hasFailure = false
     @ObservationIgnored private let coordinator = PasteCoordinator(environment: SystemPasteEnvironment())
     @ObservationIgnored private var shortcutService: ShortcutService?
+    @ObservationIgnored private var shortcutMonitor: Task<Void, Never>?
     @ObservationIgnored private var pasteTask: Task<Void, Never>?
 
     init(startUpdates: Bool = true) {
         shortcutService = ShortcutService { [weak self] in self?.triggerPaste() }
         refreshShortcut()
+        // App-owned: closing Settings must not stop recovery from a failed registration.
+        shortcutMonitor = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                do { try await Task.sleep(nanoseconds: 2_000_000_000) } catch { return }
+                guard let self else { return }
+                self.refreshShortcut()
+            }
+        }
         if startUpdates { updates.start() }
     }
     func refreshShortcut() {
         shortcutLabel = KeyboardShortcuts.getShortcut(for: .purePaste)?.description ?? "未设置"
+        shortcutState = shortcutService?.refresh() ?? .paused
     }
     func restoreShortcut() {
         shortcutService?.reset()
@@ -50,13 +55,18 @@ final class AppModel {
             guard let self else { return }
             let result = await coordinator.paste()
             permission.refresh()
-            status = result.message
-            hasFailure = result != .sent && result != .busy
+            pasteStatus = result.message
+            pasteFailed = result != .sent && result != .busy
             if hasFailure { NSSound.beep() }
             pasteTask = nil
         }
     }
-    func stop() { pasteTask?.cancel(); updates.stop() }
+    func stop() {
+        pasteTask?.cancel()
+        shortcutMonitor?.cancel()
+        shortcutService?.stop()
+        updates.stop()
+    }
 }
 
 struct SettingsView: View {
@@ -89,6 +99,12 @@ struct SettingsView: View {
                             shortcut == .init(.v, modifiers: [.command])
                                 ? .disallow(reason: String("请保留 ⌘V 用于普通粘贴，选择其他组合。")) : .allow
                         }
+                        .keyboardShortcutsConflictPolicy(.init(systemShortcut: .block))
+                        Text(model.shortcutState.message)
+                            .font(.caption)
+                            .foregroundStyle(model.shortcutState == .unavailable ? .orange : .secondary)
+                        Text("若其他软件也使用此组合，请修改其中一方的快捷键；开发版和正式版请只运行一个。")
+                            .font(.caption).foregroundStyle(.secondary)
                         HStack {
                             Text("默认 ⇧⌘V；清除快捷键可暂停使用。")
                                 .font(.caption).foregroundStyle(.secondary)
@@ -130,7 +146,7 @@ struct SettingsView: View {
             // This task never reads the clipboard. Refresh while this settings window is active.
             while !Task.isCancelled {
                 if NSApplication.shared.isActive { model.permission.refresh() }
-                do { try await Task.sleep(for: .seconds(1)) } catch { return }
+                do { try await Task.sleep(nanoseconds: 1_000_000_000) } catch { return }
             }
         }
     }
