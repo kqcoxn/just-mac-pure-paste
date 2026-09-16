@@ -64,7 +64,7 @@ jobs:
           APP_RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           APP_BUILD_NUMBER: ${{ github.run_number }}
         run: |
-          ./scripts/build-app.sh
+          ./scripts/build-app.sh --release
           git diff --exit-code -- Package.resolved
 
       - name: Archive and verify

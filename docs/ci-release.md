@@ -46,7 +46,7 @@ Release 先创建为草稿；上传完整后才公开。上传中途失败可在
 
 ```bash
 ./scripts/swift.sh test
-APP_VERSION=0.2.0 APP_BUILD_NUMBER=2 ./scripts/build-app.sh
+APP_VERSION=0.2.0 APP_BUILD_NUMBER=2 ./scripts/build-app.sh --release
 ./scripts/package-release.sh v0.2.0 "$(uname -m)"
 cd dist
 shasum -a 256 -c JustPurePaste-v0.2.0-macos-*.zip.sha256
@@ -63,3 +63,7 @@ CI 不启动应用、不申请辅助功能权限、不模拟向真实应用粘�
 此工作流已进行本地语法检查和 arm64 构建、ZIP 解压及校验测试；真实 GitHub 运行器、Intel 构建和 Release 发布需要在推送工作流/标签后验证。当前没有自动提交、推送、打标签或创建线上 Release。
 
 本地构建预发布时额外设置 `APP_RELEASE_TAG=v0.2.0-beta.1`（并设置 `APP_VERSION=0.2.0`）。构建脚本会验证标签与数字版本一致。未指定完整标签时默认为 `v$APP_VERSION`。
+
+## 本地开发签名
+
+本地默认构建开发版，使用登录钥匙串中的固定证书；执行 `scripts/setup-dev-signing.sh` 一次，再用 `scripts/dev.sh` 构建、安装和启动。开发版标识为 `com.justmacpurepaste.app.dev`，与发布版分开授权。CI 显式调用 `scripts/build-app.sh --release`，继续使用 ad-hoc 签名，不做公证，不读取或上传开发私钥。

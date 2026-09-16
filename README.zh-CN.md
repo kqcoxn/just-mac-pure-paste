@@ -92,11 +92,15 @@
 git clone https://github.com/kqcoxn/just-mac-pure-paste.git
 cd just-mac-pure-paste
 ./scripts/swift.sh test
-./scripts/build-app.sh
-open "dist/Just Pure Paste.app"
+./scripts/setup-dev-signing.sh  # one-time setup
+./scripts/dev.sh               # build, install, and launch
 ```
 
-产物为 `dist/Just Pure Paste.app`，使用本机架构与 ad-hoc 签名，固定 Bundle ID 为 `com.justmacpurepaste.app`。脚本不会自动安装或替换“应用程序”目录中的应用。重建前请先退出正在运行的副本。
+日常开发使用固定的本地自签名证书，私钥保存在登录钥匙串，不进入仓库。首次执行 `setup-dev-signing.sh` 时 macOS 可能要求确认钥匙串操作；已有证书会复用，不会每次生成。也可设置 `DEV_SIGNING_IDENTITY` 使用已有开发证书的名称。
+
+之后只需运行 `./scripts/dev.sh`：先构建并验证签名，再退出旧开发版、安装到 `~/Applications/Just Pure Paste Dev.app` 并启动。开发版使用独立 Bundle ID `com.justmacpurepaste.app.dev`；首次使用需为开发版授予辅助功能权限。保持同一证书与应用身份，以便系统在重建后继续识别授权。请勿同时运行发布版与开发版，以免争抢快捷键。不要删除开发证书或私钥；更换证书可能需要重新授权。
+
+`./scripts/build-app.sh` 默认仅构建开发版，产物在 `dist/development/Just Pure Paste Dev.app`。发布构建显式使用 `./scripts/build-app.sh --release`，产物仍为 `dist/Just Pure Paste.app`，Bundle ID 为 `com.justmacpurepaste.app`，使用 ad-hoc 签名且不公证。CI 使用发布模式，不使用本机开发证书。发布版更新后仍可能需要重新授权；允许打开下载的应用与辅助功能授权是不同步骤。
 
 <details>
 <summary><strong>构建兼容与依赖处理</strong></summary>

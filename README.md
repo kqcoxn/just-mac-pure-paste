@@ -92,11 +92,15 @@ Use **Swift 6.2+**, Python 3, and the project’s build scripts on macOS. CI use
 git clone https://github.com/kqcoxn/just-mac-pure-paste.git
 cd just-mac-pure-paste
 ./scripts/swift.sh test
-./scripts/build-app.sh
-open "dist/Just Pure Paste.app"
+./scripts/setup-dev-signing.sh  # one-time setup
+./scripts/dev.sh               # build, install, and launch
 ```
 
-The output is `dist/Just Pure Paste.app`, built for your Mac’s architecture with ad-hoc signing and bundle ID `com.justmacpurepaste.app`. The script does not install or replace an app in Applications. Quit a running copy before rebuilding it.
+Local development uses a persistent self-signed code-signing certificate, with its private key kept in the login keychain, never in the repository. The one-time setup may prompt for a keychain operation; subsequent runs reuse the identity. Set `DEV_SIGNING_IDENTITY` to an existing development certificate name if preferred.
+
+For daily use, run `./scripts/dev.sh`. It builds and verifies the app before stopping the old development copy, installing to `~/Applications/Just Pure Paste Dev.app`, and launching it. The development bundle ID is `com.justmacpurepaste.app.dev`; grant Accessibility access to this copy once. Keeping the certificate and app identity stable lets macOS recognize subsequent builds. Do not run the release and development copies together, as their shortcuts can conflict. Keep the certificate and private key; changing them may require reauthorization.
+
+`./scripts/build-app.sh` defaults to building only the development bundle at `dist/development/Just Pure Paste Dev.app`. Use `./scripts/build-app.sh --release` for the ad-hoc signed, unnotarized release bundle at `dist/Just Pure Paste.app` with ID `com.justmacpurepaste.app`. CI explicitly uses release mode and does not use your local certificate. Release updates may still need Accessibility reauthorization; allowing a downloaded app to open is separate from granting Accessibility access.
 
 <details>
 <summary><strong>Build compatibility and dependency handling</strong></summary>

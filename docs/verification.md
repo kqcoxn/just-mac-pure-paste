@@ -16,7 +16,7 @@
 | 检查 | 结果 |
 | --- | --- |
 | 自动测试 | `./scripts/swift.sh test`：13 项测试，2 个测试套件，含参数化用例，全部通过 |
-| Release 构建与打包 | `./scripts/build-app.sh` 成功生成 `.app` |
+| Release 构建与打包 | `./scripts/build-app.sh --release` 成功生成 `.app` |
 | 签名 | `codesign --verify --strict` 通过 |
 | 依赖资源 | 本地化 bundle 与 MIT 许可证随应用放入 `Contents/Resources`；中文录制控件正常显示 |
 | 首次启动 | 自动展示设置，显示默认 ⇧⌘V、权限状态和说明 |
@@ -68,3 +68,12 @@
 - 实际验证预发布构建可写入 `JPPReleaseTag=v0.1.0-beta.1`，且标签与数字版本不匹配会在构建前失败；交付产物已重新构建为默认正式版本。
 - GitHub Actions 语法和 shell 语法检查通过，CI 将完整标签写入应用，避免预发布版本丢失后缀。
 - 按用户要求未进行界面控制或启动应用。新设置区、菜单栏提示及打开下载页仍需用户手工验证；后台定时行为通过注入时间的自动测试验证，未进行真实 24 小时等待测试。
+
+
+## 固定本地开发签名验证
+
+- 创建登录钥匙串中的 `Just Pure Paste Local Development` 自签名身份；重复执行设置脚本会复用证书。
+- `scripts/dev.sh` 成功构建、签名校验、安装并启动 `~/Applications/Just Pure Paste Dev.app`；重复执行会退出并替换该开发版。
+- 分别使用构建号 1 与 2 构建，验证 CDHash 改变，但 designated requirement 保持相同，绑定开发版 Bundle ID 与同一证书。
+- `scripts/build-app.sh --release` 和 `scripts/package-release.sh local-signing-check arm64` 均通过，发布版继续使用 ad-hoc 签名。
+- 首次开发版辅助功能授权仍需用户完成；上述签名验证不代表已完成授权后跨构建的真实粘贴测试。
