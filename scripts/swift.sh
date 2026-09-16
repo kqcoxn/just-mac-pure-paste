@@ -5,7 +5,7 @@ cd "$PROJECT_ROOT"
 COMMAND="${1:-build}"
 if [ "$#" -gt 0 ]; then shift; fi
 swift package resolve
-DEVELOPER_PATH="$(xcode-select -p)"
+DEVELOPER_PATH="${DEVELOPER_DIR:-$(xcode-select -p)}"
 if [[ "$DEVELOPER_PATH" == */CommandLineTools ]]; then
     # CLT does not ship SwiftUIMacros/PreviewsMacros. SDK 26 retains wrapper-based @State.
     SDK_PATH="$DEVELOPER_PATH/SDKs/MacOSX26.sdk"

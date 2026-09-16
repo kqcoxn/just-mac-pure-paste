@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:just-mac-pure-paste}",
+      "name": "Debug JustPurePaste",
+      "target": "JustPurePaste",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug JustPurePaste"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:just-mac-pure-paste}",
+      "name": "Release JustPurePaste",
+      "target": "JustPurePaste",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release JustPurePaste"
+    }
+  ]
+}

@@ -21,6 +21,12 @@ open "dist/Just Pure Paste.app"
 
 首次运行显示设置；关闭设置后应用仍在菜单栏运行，没有 Dock 图标。后续可点击菜单栏的剪贴板图标打开设置或退出；应用已运行时，再次打开 `.app` 也会显示设置。
 
+## GitHub CI 与 Release
+
+推送到 `main`、提交 PR 或手动运行 Actions，会分别测试并构建 Apple Silicon 和 Intel 版本。推送 `v0.1.0` 形式的标签后，两个架构均构建成功才会自动发布 GitHub Release，附带应用 ZIP 与 SHA-256 校验值；`v0.2.0-beta.1` 会发布为预发布版本。
+
+无需配置额外密钥，继续使用 ad-hoc 签名，尚未进行 Apple 公证。具体操作、下载入口与限制见 [CI 与发版说明](docs/ci-release.md)。
+
 ## 授权与使用
 
 1. 在应用设置中点击“请求授权”。
