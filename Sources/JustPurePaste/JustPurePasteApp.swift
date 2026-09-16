@@ -5,19 +5,6 @@ import PasteCore
 import SwiftUI
 import UpdateCore
 
-extension Notification.Name {
-    static let showPurePasteSettings = Self("showPurePasteSettings")
-}
-
-@MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        NotificationCenter.default.post(name: .showPurePasteSettings, object: nil)
-        return true
-    }
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
-}
-
 extension KeyboardShortcuts.Name {
     static let purePaste = Self("purePaste", initial: .init(.v, modifiers: [.shift, .command]))
 }
@@ -45,10 +32,10 @@ final class AppModel {
     @ObservationIgnored private var shortcutService: ShortcutService?
     @ObservationIgnored private var pasteTask: Task<Void, Never>?
 
-    init() {
+    init(startUpdates: Bool = true) {
         shortcutService = ShortcutService { [weak self] in self?.triggerPaste() }
         refreshShortcut()
-        updates.start()
+        if startUpdates { updates.start() }
     }
     func refreshShortcut() {
         shortcutLabel = KeyboardShortcuts.getShortcut(for: .purePaste)?.description ?? "未设置"
@@ -72,75 +59,9 @@ final class AppModel {
     func stop() { pasteTask?.cancel(); updates.stop() }
 }
 
-@main
-struct JustPurePasteApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var model = AppModel()
-
-    var body: some Scene {
-        MenuBarExtra {
-            Text("纯文本粘贴 · \(model.shortcutLabel)")
-            Text(model.status)
-            if !model.permission.granted {
-                Text("需要辅助功能权限")
-            }
-            Divider()
-            OpenSettingsButton()
-            Button(model.updates.isChecking ? "正在检查更新…" : "检查更新…") {
-                Task { await model.updates.check() }
-            }
-            .disabled(model.updates.isChecking)
-            Text(model.updates.status)
-            if let release = model.updates.availableRelease {
-                Button("下载新版本 \(release.tag)…") { NSWorkspace.shared.open(release.url) }
-            }
-            Divider()
-            Button("退出 Just Pure Paste") {
-                model.stop()
-                NSApplication.shared.terminate(nil)
-            }
-            .keyboardShortcut("q")
-        } label: {
-            MenuBarLabel(model: model)
-        }
-        Settings {
-            SettingsView(model: model)
-        }
-    }
-}
-
-private struct OpenSettingsButton: View {
-    @Environment(\.openSettings) private var openSettings
-    var body: some View {
-        Button("设置…") {
-            openSettings.showWithDockIcon()
-        }
-        .keyboardShortcut(",")
-    }
-}
-
-private struct MenuBarLabel: View {
+struct SettingsView: View {
     let model: AppModel
-    @Environment(\.openSettings) private var openSettings
-    @AppStorage("hasShownWelcome") private var hasShownWelcome = false
-
-    var body: some View {
-        Image(systemName: model.updates.availableRelease != nil ? "arrow.down.circle" : (model.hasFailure ? "doc.on.clipboard.fill" : "doc.on.clipboard"))
-            .accessibilityLabel("Just Pure Paste，\(model.status)，\(model.updates.status)")
-            .help("Just Pure Paste · \(model.shortcutLabel) · \(model.status) · \(model.updates.status)")
-            .onReceive(NotificationCenter.default.publisher(for: .showPurePasteSettings)) { _ in
-                openSettings.showWithDockIcon()
-            }
-            .task {
-                guard !hasShownWelcome else { return }
-                hasShownWelcome = true
-                openSettings.showWithDockIcon()
-            }
-    }
-}
-
-private struct SettingsView: View {
-    let model: AppModel
+    let menuBar: MenuBarController
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -155,6 +76,10 @@ private struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                Toggle("在菜单栏显示图标", isOn: Binding(
+                    get: { menuBar.isVisible },
+                    set: { menuBar.setVisible($0) }
+                ))
                 GroupBox("全局快捷键") {
                     VStack(alignment: .leading, spacing: 12) {
                         KeyboardShortcuts.Recorder("纯文本粘贴", name: .purePaste) { _ in

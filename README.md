@@ -36,7 +36,7 @@ Copied text often brings fonts, colors, and other source formatting along with i
 | --- | --- |
 | **One shortcut** | Start with **⇧⌘V**, or record your own global shortcut. Your choice survives restarts. |
 | **Your words, intact** | Preserve spaces, line breaks, Unicode, and emoji while removing source formatting. |
-| **Quiet by design** | Lives in the menu bar with no Dock icon. Closing Settings keeps it running. |
+| **Quiet by design** | Optional menu bar icon; the Dock icon appears while Settings is visible. Closing Settings keeps it running. |
 | **Local clipboard handling** | No clipboard history, content uploads, or cloud sync. Clipboard reading happens when you trigger the shortcut. |
 | **Update awareness** | Checks GitHub for stable releases and links to the download page when an update is available. |
 
@@ -59,7 +59,7 @@ The app currently uses ad-hoc signing and is **not Apple-notarized**. macOS may 
 
 ### 2. Allow Accessibility access
 
-Settings opens on first launch. **The app interface is currently in Simplified Chinese**; this README’s language switch changes the documentation only.
+Settings opens whenever you launch or reopen the app. **The app interface is currently in Simplified Chinese**; this README’s language switch changes the documentation only.
 
 1. Click **请求授权** (Request permission) in the app.
 2. Open **System Settings → Privacy & Security → Accessibility** and enable **Just Pure Paste**. Add the `.app` manually if it is missing.
@@ -74,7 +74,7 @@ Copy some text, focus the destination input field, and press **⇧⌘V**. Releas
 
 Use the menu bar’s clipboard icon → **设置…** (Settings) to change the shortcut. Clear it to pause the hotkey, or click **恢复默认** (Restore default) to return to ⇧⌘V. If another app uses the same shortcut, choose a different combination. Regular **⌘V** remains unchanged and cannot be assigned to this tool.
 
-Closing Settings leaves the app running. To stop it, choose **退出 Just Pure Paste** (Quit) from the menu bar.
+Closing Settings leaves the app running. Command-dragging the menu bar icon away only hides it; the hotkey keeps working, and the hidden state persists across launches. Open the app again to show Settings, where **在菜单栏显示图标** restores the icon. To stop the app, choose **退出 Just Pure Paste** (Quit) from the menu bar or press ⌘Q in Settings.
 
 ## Updates
 

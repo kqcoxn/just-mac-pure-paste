@@ -1,15 +1,6 @@
 import AppKit
 import SwiftUI
 
-extension OpenSettingsAction {
-    @MainActor
-    func showWithDockIcon() {
-        NSApplication.shared.setActivationPolicy(.regular)
-        NSApplication.shared.activate(ignoringOtherApps: true)
-        self()
-    }
-}
-
 /// Observe the settings window itself: SwiftUI appearance does not track closing
 /// or minimizing a cached Settings scene, and losing focus must not hide its icon.
 struct SettingsWindowDockPresence: NSViewRepresentable {
