@@ -26,7 +26,7 @@ git push origin v0.1.0
 
 稳定版标签格式为 `v主版本.次版本.补丁版本`，例如 `v0.1.0`。预发布支持 `v0.2.0-beta.1`，会自动标记为 GitHub Pre-release。各数字部分不接受前导零，不接受构建元数据 `+...`；不符合规则的 `v*` 标签会明确失败，不会发布。
 
-标签提供应用的 `CFBundleShortVersionString`（预发布后缀不写入此字段），Actions 的运行编号提供 `CFBundleVersion`。无需为了每次标签发布手动修改 plist；本地不指定版本时仍使用 plist 默认值。
+标签提供应用的 `CFBundleShortVersionString`（预发布后缀不写入此字段），Actions 的运行编号提供 `CFBundleVersion`。完整标签同时写入 `JPPReleaseTag`，供应用更新检查区分预发布和正式版。无需为了每次标签发布手动修改 plist；本地不指定版本时仍使用 plist 默认值。
 
 Release 附件：
 
@@ -61,3 +61,5 @@ shasum -a 256 -c JustPurePaste-v0.2.0-macos-*.zip.sha256
 CI 不启动应用、不申请辅助功能权限、不模拟向真实应用粘贴。自动测试使用独立剪贴板和按键替身。
 
 此工作流已进行本地语法检查和 arm64 构建、ZIP 解压及校验测试；真实 GitHub 运行器、Intel 构建和 Release 发布需要在推送工作流/标签后验证。当前没有自动提交、推送、打标签或创建线上 Release。
+
+本地构建预发布时额外设置 `APP_RELEASE_TAG=v0.2.0-beta.1`（并设置 `APP_VERSION=0.2.0`）。构建脚本会验证标签与数字版本一致。未指定完整标签时默认为 `v$APP_VERSION`。

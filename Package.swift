@@ -11,8 +11,10 @@ let package = Package(
     ],
     targets: [
         .target(name: "PasteCore"),
-        .executableTarget(name: "JustPurePaste", dependencies: ["PasteCore", "KeyboardShortcuts"]),
-        .testTarget(name: "PasteCoreTests", dependencies: ["PasteCore"])
+        .target(name: "UpdateCore"),
+        .executableTarget(name: "JustPurePaste", dependencies: ["PasteCore", "UpdateCore", "KeyboardShortcuts"]),
+        .testTarget(name: "PasteCoreTests", dependencies: ["PasteCore"]),
+        .testTarget(name: "UpdateCoreTests", dependencies: ["UpdateCore"])
     ],
     swiftLanguageModes: [.v6]
 )

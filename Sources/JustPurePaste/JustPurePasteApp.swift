@@ -3,6 +3,7 @@ import KeyboardShortcuts
 import Observation
 import PasteCore
 import SwiftUI
+import UpdateCore
 
 extension Notification.Name {
     static let showPurePasteSettings = Self("showPurePasteSettings")
@@ -33,6 +34,10 @@ final class ShortcutService {
 @Observable
 final class AppModel {
     let permission = PermissionService()
+    let updates = UpdateService(currentVersion:
+        Bundle.main.object(forInfoDictionaryKey: "JPPReleaseTag") as? String
+        ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        ?? "unknown")
     private(set) var status = "就绪"
     private(set) var shortcutLabel = ""
     private(set) var hasFailure = false
@@ -43,6 +48,7 @@ final class AppModel {
     init() {
         shortcutService = ShortcutService { [weak self] in self?.triggerPaste() }
         refreshShortcut()
+        updates.start()
     }
     func refreshShortcut() {
         shortcutLabel = KeyboardShortcuts.getShortcut(for: .purePaste)?.description ?? "未设置"
@@ -63,7 +69,7 @@ final class AppModel {
             pasteTask = nil
         }
     }
-    func stop() { pasteTask?.cancel() }
+    func stop() { pasteTask?.cancel(); updates.stop() }
 }
 
 @main
@@ -80,6 +86,14 @@ struct JustPurePasteApp: App {
             }
             Divider()
             OpenSettingsButton()
+            Button(model.updates.isChecking ? "正在检查更新…" : "检查更新…") {
+                Task { await model.updates.check() }
+            }
+            .disabled(model.updates.isChecking)
+            Text(model.updates.status)
+            if let release = model.updates.availableRelease {
+                Button("下载新版本 \(release.tag)…") { NSWorkspace.shared.open(release.url) }
+            }
             Divider()
             Button("退出 Just Pure Paste") {
                 model.stop()
@@ -112,9 +126,9 @@ private struct MenuBarLabel: View {
     @AppStorage("hasShownWelcome") private var hasShownWelcome = false
 
     var body: some View {
-        Image(systemName: model.hasFailure ? "doc.on.clipboard.fill" : "doc.on.clipboard")
-            .accessibilityLabel("Just Pure Paste，\(model.status)")
-            .help("Just Pure Paste · \(model.shortcutLabel) · \(model.status)")
+        Image(systemName: model.updates.availableRelease != nil ? "arrow.down.circle" : (model.hasFailure ? "doc.on.clipboard.fill" : "doc.on.clipboard"))
+            .accessibilityLabel("Just Pure Paste，\(model.status)，\(model.updates.status)")
+            .help("Just Pure Paste · \(model.shortcutLabel) · \(model.status) · \(model.updates.status)")
             .onReceive(NotificationCenter.default.publisher(for: .showPurePasteSettings)) { _ in
                 NSApplication.shared.activate(ignoringOtherApps: true)
                 openSettings()
@@ -131,68 +145,99 @@ private struct MenuBarLabel: View {
 private struct SettingsView: View {
     let model: AppModel
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack(spacing: 12) {
-                Image(systemName: "doc.on.clipboard")
-                    .font(.system(size: 32))
-                    .foregroundStyle(.tint)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Just Pure Paste").font(.title2.bold())
-                    Text("复制内容，按下快捷键，只粘贴文本。")
-                        .foregroundStyle(.secondary)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(spacing: 12) {
+                    Image(systemName: "doc.on.clipboard")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.tint)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Just Pure Paste").font(.title2.bold())
+                        Text("复制内容，按下快捷键，只粘贴文本。")
+                            .foregroundStyle(.secondary)
+                    }
                 }
-            }
-            GroupBox("全局快捷键") {
-                VStack(alignment: .leading, spacing: 12) {
-                    KeyboardShortcuts.Recorder("纯文本粘贴", name: .purePaste) { _ in
-                        model.refreshShortcut()
-                    }
-                    .shortcutValidation { shortcut in
-                        shortcut == .init(.v, modifiers: [.command])
-                            ? .disallow(reason: String("请保留 ⌘V 用于普通粘贴，选择其他组合。")) : .allow
-                    }
-                    HStack {
-                        Text("默认 ⇧⌘V；清除快捷键可暂停使用。")
-                            .font(.caption).foregroundStyle(.secondary)
-                        Spacer()
-                        Button("恢复默认") { model.restoreShortcut() }
-                    }
-                }.padding(8)
-            }
-            GroupBox("辅助功能权限") {
-                VStack(alignment: .leading, spacing: 10) {
-                    Label(model.permission.granted ? "已授权" : "尚未授权",
-                          systemImage: model.permission.granted ? "checkmark.circle.fill" : "exclamationmark.circle")
-                        .foregroundStyle(model.permission.granted ? .green : .orange)
-                    Text("用于向当前应用发送粘贴按键。请在系统设置的“隐私与安全性 → 辅助功能”中允许 Just Pure Paste。")
-                        .font(.callout).foregroundStyle(.secondary)
-                    HStack {
-                        if !model.permission.granted {
-                            Button("请求授权") { model.permission.request() }
+                GroupBox("全局快捷键") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        KeyboardShortcuts.Recorder("纯文本粘贴", name: .purePaste) { _ in
+                            model.refreshShortcut()
                         }
-                        Button("打开系统设置") { model.permission.openSystemSettings() }
-                        Button("重新检查") { model.permission.refresh() }
-                    }
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(8)
+                        .shortcutValidation { shortcut in
+                            shortcut == .init(.v, modifiers: [.command])
+                                ? .disallow(reason: String("请保留 ⌘V 用于普通粘贴，选择其他组合。")) : .allow
+                        }
+                        HStack {
+                            Text("默认 ⇧⌘V；清除快捷键可暂停使用。")
+                                .font(.caption).foregroundStyle(.secondary)
+                            Spacer()
+                            Button("恢复默认") { model.restoreShortcut() }
+                        }
+                    }.padding(8)
+                }
+                GroupBox("辅助功能权限") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label(model.permission.granted ? "已授权" : "尚未授权",
+                              systemImage: model.permission.granted ? "checkmark.circle.fill" : "exclamationmark.circle")
+                            .foregroundStyle(model.permission.granted ? .green : .orange)
+                        Text("用于向当前应用发送粘贴按键。请在系统设置的“隐私与安全性 → 辅助功能”中允许 Just Pure Paste。")
+                            .font(.callout).foregroundStyle(.secondary)
+                        HStack {
+                            if !model.permission.granted {
+                                Button("请求授权") { model.permission.request() }
+                            }
+                            Button("打开系统设置") { model.permission.openSystemSettings() }
+                            Button("重新检查") { model.permission.refresh() }
+                        }
+                    }.frame(maxWidth: .infinity, alignment: .leading).padding(8)
+                }
+                UpdateSettingsView(updates: model.updates)
+                Text("粘贴后，剪贴板会保持纯文本，原有格式不会恢复。保留换行、空格和 emoji；图片和文件不会被转换。")
+                    .font(.callout).foregroundStyle(.secondary)
+                Text("仅在触发快捷键时读取剪贴板，不保存历史、不上传内容。若系统询问剪贴板访问权限，请允许以继续粘贴。")
+                    .font(.caption).foregroundStyle(.secondary)
+                Divider()
+                Label(model.status, systemImage: model.hasFailure ? "exclamationmark.circle" : "info.circle")
+                    .font(.callout).textSelection(.enabled)
             }
-            Text("粘贴后，剪贴板会保持纯文本，原有格式不会恢复。保留换行、空格和 emoji；图片和文件不会被转换。")
-                .font(.callout).foregroundStyle(.secondary)
-            Text("仅在触发快捷键时读取剪贴板，不保存历史、不上传内容。若系统询问剪贴板访问权限，请允许以继续粘贴。")
-                .font(.caption).foregroundStyle(.secondary)
-            Divider()
-            Label(model.status, systemImage: model.hasFailure ? "exclamationmark.circle" : "info.circle")
-                .font(.callout).textSelection(.enabled)
+            .padding(24)
         }
-        .padding(24)
-        .frame(width: 480)
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(width: 480, height: 660)
         .task {
             // This task never reads the clipboard. Refresh while this settings window is active.
             while !Task.isCancelled {
                 if NSApplication.shared.isActive { model.permission.refresh() }
                 do { try await Task.sleep(for: .seconds(1)) } catch { return }
             }
+        }
+    }
+}
+
+private struct UpdateSettingsView: View {
+    @Bindable var updates: UpdateService
+
+    var body: some View {
+        GroupBox("软件更新") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("当前版本：\(updates.currentVersion)")
+                Toggle("自动检查更新（每天一次）", isOn: $updates.automaticallyChecks)
+                Text(updates.status).font(.callout).textSelection(.enabled)
+                if let checked = updates.lastChecked {
+                    Text("上次成功检查：\(checked.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                HStack {
+                    Button(updates.isChecking ? "正在检查…" : "检查更新") {
+                        Task { await updates.check() }
+                    }
+                    .disabled(updates.isChecking)
+                    if let release = updates.availableRelease {
+                        Button("下载 \(release.tag)…") { NSWorkspace.shared.open(release.url) }
+                    }
+                }
+                Text("仅查询 GitHub 正式版，不上传剪贴板内容。下载按钮打开发布页，由你选择并安装新版本。")
+                    .font(.caption).foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(8)
         }
     }
 }

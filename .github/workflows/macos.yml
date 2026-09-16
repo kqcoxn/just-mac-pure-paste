@@ -61,6 +61,7 @@ jobs:
       - name: Build app
         env:
           APP_VERSION: ${{ steps.version.outputs.version }}
+          APP_RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           APP_BUILD_NUMBER: ${{ github.run_number }}
         run: |
           ./scripts/build-app.sh

@@ -70,11 +70,11 @@
 ## 暂不包含
 
 - 剪贴板历史、收藏与搜索。
-- 云同步、账号和联网服务。
+- 云同步、账号和除 GitHub 更新查询之外的联网服务。
 - 后台自动清除复制内容的格式。
 - 自动恢复原始剪贴板。
 - 文本清洗、翻译、改写或 OCR。
-- 开机启动、自动更新和复杂设置。
+- 开机启动、自动下载/安装更新和复杂设置。
 - 第一版上架 Mac App Store。
 
 后续确需发布时，再规划签名、公证和分发。如果决定上架 Mac App Store，先验证沙盒下完整粘贴流程的可行性。
@@ -109,3 +109,9 @@
 - [Apple：CGEvent.post](https://developer.apple.com/documentation/coregraphics/cgevent/post(tap:))
 - [KeyboardShortcuts 源码与使用说明](https://github.com/sindresorhus/KeyboardShortcuts)
 - [Apple：拷贝、粘贴与匹配样式](https://support.apple.com/en-asia/102553)
+
+## 后续新增：更新检查
+
+已增加 GitHub Release 更新检查。菜单栏与设置均支持手动检查，后台默认每 24 小时检查一次，可关闭；仅面向最新公开正式版。新版本通过菜单栏图标和下载页入口提示，不弹窗、不自动下载或安装。按语义版本比较，保留预发布构建的完整标签，使同号正式版能被识别为更新。
+
+检查请求不访问剪贴板、不携带令牌。失败不影响粘贴；手动请求至少间隔一分钟，自动请求的时间与已发现版本会保存到本地，重启后继续遵守检查间隔。
