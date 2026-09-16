@@ -1,0 +1,198 @@
+import AppKit
+import KeyboardShortcuts
+import Observation
+import PasteCore
+import SwiftUI
+
+extension Notification.Name {
+    static let showPurePasteSettings = Self("showPurePasteSettings")
+}
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        NotificationCenter.default.post(name: .showPurePasteSettings, object: nil)
+        return true
+    }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+}
+
+extension KeyboardShortcuts.Name {
+    static let purePaste = Self("purePaste", initial: .init(.v, modifiers: [.shift, .command]))
+}
+
+@MainActor
+final class ShortcutService {
+    init(action: @escaping @MainActor () -> Void) {
+        KeyboardShortcuts.onKeyUp(for: .purePaste, action: action)
+    }
+    func reset() { KeyboardShortcuts.reset(.purePaste) }
+}
+
+@MainActor
+@Observable
+final class AppModel {
+    let permission = PermissionService()
+    private(set) var status = "就绪"
+    private(set) var shortcutLabel = ""
+    private(set) var hasFailure = false
+    @ObservationIgnored private let coordinator = PasteCoordinator(environment: SystemPasteEnvironment())
+    @ObservationIgnored private var shortcutService: ShortcutService?
+    @ObservationIgnored private var pasteTask: Task<Void, Never>?
+
+    init() {
+        shortcutService = ShortcutService { [weak self] in self?.triggerPaste() }
+        refreshShortcut()
+    }
+    func refreshShortcut() {
+        shortcutLabel = KeyboardShortcuts.getShortcut(for: .purePaste)?.description ?? "未设置"
+    }
+    func restoreShortcut() {
+        shortcutService?.reset()
+        refreshShortcut()
+    }
+    private func triggerPaste() {
+        guard pasteTask == nil else { return }
+        pasteTask = Task { [weak self] in
+            guard let self else { return }
+            let result = await coordinator.paste()
+            permission.refresh()
+            status = result.message
+            hasFailure = result != .sent && result != .busy
+            if hasFailure { NSSound.beep() }
+            pasteTask = nil
+        }
+    }
+    func stop() { pasteTask?.cancel() }
+}
+
+@main
+struct JustPurePasteApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var model = AppModel()
+
+    var body: some Scene {
+        MenuBarExtra {
+            Text("纯文本粘贴 · \(model.shortcutLabel)")
+            Text(model.status)
+            if !model.permission.granted {
+                Text("需要辅助功能权限")
+            }
+            Divider()
+            OpenSettingsButton()
+            Divider()
+            Button("退出 Just Pure Paste") {
+                model.stop()
+                NSApplication.shared.terminate(nil)
+            }
+            .keyboardShortcut("q")
+        } label: {
+            MenuBarLabel(model: model)
+        }
+        Settings {
+            SettingsView(model: model)
+        }
+    }
+}
+
+private struct OpenSettingsButton: View {
+    @Environment(\.openSettings) private var openSettings
+    var body: some View {
+        Button("设置…") {
+            NSApplication.shared.activate(ignoringOtherApps: true)
+            openSettings()
+        }
+        .keyboardShortcut(",")
+    }
+}
+
+private struct MenuBarLabel: View {
+    let model: AppModel
+    @Environment(\.openSettings) private var openSettings
+    @AppStorage("hasShownWelcome") private var hasShownWelcome = false
+
+    var body: some View {
+        Image(systemName: model.hasFailure ? "doc.on.clipboard.fill" : "doc.on.clipboard")
+            .accessibilityLabel("Just Pure Paste，\(model.status)")
+            .help("Just Pure Paste · \(model.shortcutLabel) · \(model.status)")
+            .onReceive(NotificationCenter.default.publisher(for: .showPurePasteSettings)) { _ in
+                NSApplication.shared.activate(ignoringOtherApps: true)
+                openSettings()
+            }
+            .task {
+                guard !hasShownWelcome else { return }
+                hasShownWelcome = true
+                NSApplication.shared.activate(ignoringOtherApps: true)
+                openSettings()
+            }
+    }
+}
+
+private struct SettingsView: View {
+    let model: AppModel
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(spacing: 12) {
+                Image(systemName: "doc.on.clipboard")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.tint)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Just Pure Paste").font(.title2.bold())
+                    Text("复制内容，按下快捷键，只粘贴文本。")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            GroupBox("全局快捷键") {
+                VStack(alignment: .leading, spacing: 12) {
+                    KeyboardShortcuts.Recorder("纯文本粘贴", name: .purePaste) { _ in
+                        model.refreshShortcut()
+                    }
+                    .shortcutValidation { shortcut in
+                        shortcut == .init(.v, modifiers: [.command])
+                            ? .disallow(reason: String("请保留 ⌘V 用于普通粘贴，选择其他组合。")) : .allow
+                    }
+                    HStack {
+                        Text("默认 ⇧⌘V；清除快捷键可暂停使用。")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("恢复默认") { model.restoreShortcut() }
+                    }
+                }.padding(8)
+            }
+            GroupBox("辅助功能权限") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label(model.permission.granted ? "已授权" : "尚未授权",
+                          systemImage: model.permission.granted ? "checkmark.circle.fill" : "exclamationmark.circle")
+                        .foregroundStyle(model.permission.granted ? .green : .orange)
+                    Text("用于向当前应用发送粘贴按键。请在系统设置的“隐私与安全性 → 辅助功能”中允许 Just Pure Paste。")
+                        .font(.callout).foregroundStyle(.secondary)
+                    HStack {
+                        if !model.permission.granted {
+                            Button("请求授权") { model.permission.request() }
+                        }
+                        Button("打开系统设置") { model.permission.openSystemSettings() }
+                        Button("重新检查") { model.permission.refresh() }
+                    }
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(8)
+            }
+            Text("粘贴后，剪贴板会保持纯文本，原有格式不会恢复。保留换行、空格和 emoji；图片和文件不会被转换。")
+                .font(.callout).foregroundStyle(.secondary)
+            Text("仅在触发快捷键时读取剪贴板，不保存历史、不上传内容。若系统询问剪贴板访问权限，请允许以继续粘贴。")
+                .font(.caption).foregroundStyle(.secondary)
+            Divider()
+            Label(model.status, systemImage: model.hasFailure ? "exclamationmark.circle" : "info.circle")
+                .font(.callout).textSelection(.enabled)
+        }
+        .padding(24)
+        .frame(width: 480)
+        .fixedSize(horizontal: false, vertical: true)
+        .task {
+            // This task never reads the clipboard. Refresh while this settings window is active.
+            while !Task.isCancelled {
+                if NSApplication.shared.isActive { model.permission.refresh() }
+                do { try await Task.sleep(for: .seconds(1)) } catch { return }
+            }
+        }
+    }
+}
