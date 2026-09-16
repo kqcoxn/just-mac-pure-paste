@@ -113,8 +113,7 @@ private struct OpenSettingsButton: View {
     @Environment(\.openSettings) private var openSettings
     var body: some View {
         Button("设置…") {
-            NSApplication.shared.activate(ignoringOtherApps: true)
-            openSettings()
+            openSettings.showWithDockIcon()
         }
         .keyboardShortcut(",")
     }
@@ -130,14 +129,12 @@ private struct MenuBarLabel: View {
             .accessibilityLabel("Just Pure Paste，\(model.status)，\(model.updates.status)")
             .help("Just Pure Paste · \(model.shortcutLabel) · \(model.status) · \(model.updates.status)")
             .onReceive(NotificationCenter.default.publisher(for: .showPurePasteSettings)) { _ in
-                NSApplication.shared.activate(ignoringOtherApps: true)
-                openSettings()
+                openSettings.showWithDockIcon()
             }
             .task {
                 guard !hasShownWelcome else { return }
                 hasShownWelcome = true
-                NSApplication.shared.activate(ignoringOtherApps: true)
-                openSettings()
+                openSettings.showWithDockIcon()
             }
     }
 }
@@ -203,6 +200,7 @@ private struct SettingsView: View {
             .padding(24)
         }
         .frame(width: 480, height: 660)
+        .background(SettingsWindowDockPresence())
         .task {
             // This task never reads the clipboard. Refresh while this settings window is active.
             while !Task.isCancelled {
