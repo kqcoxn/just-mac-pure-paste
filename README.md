@@ -1,67 +1,147 @@
-# Just Pure Paste
+<p align="center">
+  <img src="docs/assets/readme-banner.svg" alt="Just Pure Paste — keep the words, leave the formatting. Shift + Command + V." width="960">
+</p>
 
-一个 macOS 菜单栏小工具。复制内容后，按 **⇧⌘V** 在当前应用中粘贴纯文本。
+<h1 align="center">Just Pure Paste</h1>
 
-- 快捷键可自定义、清除或恢复默认，重启后保留。
-- 保留中文、换行、空格与 emoji，移除来源格式。
-- 转换后剪贴板保持纯文本，**不会恢复原来的富文本**。
-- 不转换纯图片或文件；不保存历史、不上传内容。
+<p align="center">
+  A small macOS menu bar app for pasting plain text with one shortcut.<br>
+  Copy as usual. Press <kbd>⇧ Shift</kbd> + <kbd>⌘ Command</kbd> + <kbd>V</kbd>. Keep writing.
+</p>
 
-## 构建与运行
+<p align="center">
+  <a href="https://github.com/kqcoxn/just-mac-pure-paste/actions/workflows/macos.yml"><img src="https://github.com/kqcoxn/just-mac-pure-paste/actions/workflows/macos.yml/badge.svg" alt="macOS CI and Release"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-234f40?style=flat" alt="Requires macOS 14 or later">
+  <img src="https://img.shields.io/badge/Swift-6-F05138?style=flat&amp;logo=swift&amp;logoColor=white" alt="Built with Swift 6">
+</p>
 
-支持 macOS 14+，使用 Swift 6.2+。本机版本以 [验证记录](docs/verification.md) 为准。
+<p align="center">
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/kqcoxn/just-mac-pure-paste/releases"><strong>Download</strong></a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#build-from-source">Build from source</a> ·
+  <a href="https://github.com/kqcoxn/just-mac-pure-paste/issues">Report an issue</a>
+</p>
+
+---
+
+## A simpler paste
+
+Copied text often brings fonts, colors, and other source formatting along with it. Just Pure Paste turns the clipboard’s text into plain text, then sends a paste command to the foreground app. The destination decides how to display it.
+
+| | What you get |
+| --- | --- |
+| **One shortcut** | Start with **⇧⌘V**, or record your own global shortcut. Your choice survives restarts. |
+| **Your words, intact** | Preserve spaces, line breaks, Unicode, and emoji while removing source formatting. |
+| **Quiet by design** | Lives in the menu bar with no Dock icon. Closing Settings keeps it running. |
+| **Local clipboard handling** | No clipboard history, content uploads, or cloud sync. Clipboard reading happens when you trigger the shortcut. |
+| **Update awareness** | Checks GitHub for stable releases and links to the download page when an update is available. |
+
+> **Clipboard behavior:** after conversion, the clipboard stays plain text. The original rich text is not restored. Empty content, image-only copies, and file copies are left unchanged.
+
+## Quick start
+
+### 1. Download and open
+
+Requires **macOS 14 or later**. Pick the ZIP for your Mac from [GitHub Releases](https://github.com/kqcoxn/just-mac-pure-paste/releases):
+
+| Your Mac | Archive suffix |
+| --- | --- |
+| Apple Silicon — M-series | `macos-arm64.zip` |
+| Intel | `macos-x86_64.zip` |
+
+Unzip, move **Just Pure Paste.app** to Applications, and open it. If no release is available yet, [build it locally](#build-from-source). Development builds are also available from successful [Actions runs](https://github.com/kqcoxn/just-mac-pure-paste/actions/workflows/macos.yml).
+
+The app currently uses ad-hoc signing and is **not Apple-notarized**. macOS may require you to allow it in **System Settings → Privacy & Security**. See the [distribution notes](docs/ci-release.md#签名与验证范围) for details.
+
+### 2. Allow Accessibility access
+
+Settings opens on first launch. **The app interface is currently in Simplified Chinese**; this README’s language switch changes the documentation only.
+
+1. Click **请求授权** (Request permission) in the app.
+2. Open **System Settings → Privacy & Security → Accessibility** and enable **Just Pure Paste**. Add the `.app` manually if it is missing.
+3. Return to the app and click **重新检查** (Check again), then confirm **已授权** (Authorized).
+4. If macOS separately asks for clipboard access, allow it to continue pasting.
+
+Accessibility access lets the app send the paste keystroke to your target app.
+
+### 3. Copy, then paste
+
+Copy some text, focus the destination input field, and press **⇧⌘V**. Release the keys so the app can send the paste command.
+
+Use the menu bar’s clipboard icon → **设置…** (Settings) to change the shortcut. Clear it to pause the hotkey, or click **恢复默认** (Restore default) to return to ⇧⌘V. If another app uses the same shortcut, choose a different combination. Regular **⌘V** remains unchanged and cannot be assigned to this tool.
+
+Closing Settings leaves the app running. To stop it, choose **退出 Just Pure Paste** (Quit) from the menu bar.
+
+## Updates
+
+Automatic checks are enabled by default: the app checks on its first run, then when at least **24 hours** have passed since the last request while it is running. You can turn this off in Settings and still use **检查更新** (Check for updates) manually. Manual requests are limited to once a minute; request times and discovered updates persist across restarts.
+
+Only public, stable releases from this repository are checked. When a newer version is found, the menu bar icon changes to a download indicator and offers the release page. **Downloads and installation are manual.** Failed checks only update the status; they do not interrupt pasting.
+
+Update requests contain no account token, clipboard content, or records of which apps you use. There is no clipboard history, cloud sync, or launch-at-login feature.
+
+## Build from source
+
+Use **Swift 6.2+**, Python 3, and the project’s build scripts on macOS. CI uses Xcode 26.2. The Command Line Tools path additionally requires an installed macOS 26 SDK.
 
 ```bash
+git clone https://github.com/kqcoxn/just-mac-pure-paste.git
+cd just-mac-pure-paste
 ./scripts/swift.sh test
 ./scripts/build-app.sh
 open "dist/Just Pure Paste.app"
 ```
 
-构建产物是 `dist/Just Pure Paste.app`，使用本机架构和 ad-hoc 签名，固定 Bundle ID 为 `com.justmacpurepaste.app`。不会自动复制或替换“应用程序”目录中的安装。运行期间重建前，请从菜单栏退出应用。
+The output is `dist/Just Pure Paste.app`, built for your Mac’s architecture with ad-hoc signing and bundle ID `com.justmacpurepaste.app`. The script does not install or replace an app in Applications. Quit a running copy before rebuilding it.
 
-首次运行显示设置；关闭设置后应用仍在菜单栏运行，没有 Dock 图标。后续可点击菜单栏的剪贴板图标打开设置或退出；应用已运行时，再次打开 `.app` 也会显示设置。
+<details>
+<summary><strong>Build compatibility and dependency handling</strong></summary>
 
-## 检查更新
+[KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) is pinned to **3.1.0**, with its revision recorded in `Package.resolved`.
 
-菜单栏和设置中均提供“检查更新”。默认启用后台自动检查：首次运行检查一次，之后距离上次请求满 24 小时再检查；应用未运行时不检查。可以在设置中关闭，手动检查仍然可用。
+Command Line Tools lacks the SwiftUI macro plugins used by this dependency. In that environment, `scripts/swift.sh` uses the installed macOS 26 SDK and SwiftPM’s native build system, expands `@Entry` into an equivalent `EnvironmentKey`, and removes three design-only `#Preview` blocks from the disposable `.build` checkout. Shortcut logic and the pinned dependency version are unchanged. Cleaning the cache causes the script to reapply these adjustments.
 
-只查询本仓库 GitHub 的最新公开正式 Release，忽略草稿与预发布。发现新版本时，菜单栏图标变为下载提示，并提供发布页入口；**不自动下载或安装**。检查结果和上次请求时间会保存，重启不会重复请求；手动检查最短间隔一分钟。检查失败只显示状态，不弹窗或影响粘贴。
+Full Xcode builds do not need those macro adjustments. In all environments, the script also adjusts dependency resource lookup so localization bundles can live in `Contents/Resources` and pass signature verification. Use the scripts instead of direct `swift build` / `swift test` in the CLT environment. They do not install SDKs or change system tools.
 
-请求不携带账号令牌、剪贴板内容或其他应用使用记录。没有正式 Release、网络失败、请求受限时会显示对应说明。
+</details>
 
-## GitHub CI 与 Release
+## Notes and troubleshooting
 
-推送到 `main`、提交 PR 或手动运行 Actions，会分别测试并构建 Apple Silicon 和 Intel 版本。推送 `v0.1.0` 形式的标签后，两个架构均构建成功才会自动发布 GitHub Release，附带应用 ZIP 与 SHA-256 校验值；`v0.2.0-beta.1` 会发布为预发布版本。
+| Situation | What to check |
+| --- | --- |
+| Nothing is pasted | Confirm Accessibility access and focus an editable field. Read the status in the menu bar or Settings after the failure sound. |
+| Permission stops working after an update | Ad-hoc signed apps may need Accessibility permission granted again after being rebuilt or moved. |
+| An operation is cancelled | The app waits up to one second for modifier keys to be released. Switching apps or changing the clipboard during the operation cancels it; there is no automatic retry. |
+| Status says **已发送粘贴** | This means “Paste sent.” It confirms the keystroke was posted, not that the target field accepted it. |
+| A particular app behaves differently | Secure input fields, remote desktops, and other special inputs may not accept simulated keystrokes. |
 
-无需配置额外密钥，继续使用 ad-hoc 签名，尚未进行 Apple 公证。具体操作、下载入口与限制见 [CI 与发版说明](docs/ci-release.md)。
+<details>
+<summary><strong>Text conversion and clipboard limitations</strong></summary>
 
-## 授权与使用
+The app reads a plain-text representation first and can extract text from RTF. HTML-only content without a text representation is not parsed.
 
-1. 在应用设置中点击“请求授权”。
-2. 在系统设置 → 隐私与安全性 → 辅助功能中启用 **Just Pure Paste**；列表中没有时，手动添加生成的 `.app`。
-3. 回到应用设置确认“已授权”，再切回目标应用复制、粘贴。
-4. 若系统另行询问剪贴板访问权限，请允许读取。系统授权必须由用户完成。
+macOS provides no atomic compare-and-swap for the clipboard. The app checks for changes immediately before writing, but a small race window remains. A failed write, or a target/permission change immediately after writing, can leave the original formatting removed even if no paste is sent. The clipboard is not restored and the operation is not retried automatically.
 
-默认快捷键为 **Shift + Command + V**。可在设置中录制其他组合；清除后暂停快捷键功能。普通 ⌘V 不会被接管，也不允许将本工具设置成 ⌘V。全局快捷键可能与其他应用的 ⇧⌘V 功能冲突，可自行更换。
+</details>
 
-失败时提示音响起，原因显示在菜单栏和设置中。发送按键不会自动打开设置或抢走焦点。“已发送粘贴”仅表示事件已发出，不保证目标输入框接收成功。
+## Project documentation
 
-## 构建兼容处理
+The detailed engineering documents below are currently in Chinese.
 
-依赖固定为 KeyboardShortcuts **3.1.0**，具体提交记录在 `Package.resolved`。
+| Document | Contents |
+| --- | --- |
+| [Project plan](docs/project-plan.md) | Scope, architecture, and behavior decisions |
+| [CI and releases](docs/ci-release.md) | Apple Silicon / Intel builds, version tags, archives, and checksums |
+| [Verification record](docs/verification.md) | Completed checks, tested environments, and pending manual validation |
 
-本机只有 Command Line Tools，缺少 SwiftUIMacros 与 PreviewsMacros。`scripts/swift.sh` 在该环境使用已安装的 macOS 26 SDK 和 SwiftPM native 构建，并对 `.build` 中的依赖缓存做两项可重复转换：将 `@Entry` 展开为等价的 `EnvironmentKey`，移除三段仅用于设计预览的 `#Preview`。不改动快捷键逻辑或上游版本；清理缓存后脚本会重新应用。完整 Xcode 环境不需要这两项宏兼容转换，未在本机验证。所有环境还会调整依赖的资源查找入口，使本地化资源能放进标准的 `Contents/Resources` 并通过签名检查。
+CI tests and packages both architectures on pushes to `main`, pull requests, and manual runs. Pushing a `v*` version tag publishes a GitHub Release after both builds succeed; prerelease tags produce prereleases. See the release guide for exact steps.
 
-因此本机请使用上述脚本，直接 `swift build` / `swift test` 会因缺失宏插件失败。兼容脚本要求本机已有 macOS 26 SDK，不自动安装或修改系统工具。
+**Validation scope:** local automated tests, arm64 builds, and packaging have passed. Real paste checks in Safari, VS Code, WeChat, and WPS are pending Accessibility authorization; macOS 14 and Intel runtime compatibility are also pending validation. See the record above rather than assuming universal app compatibility.
 
-## 已知边界
+---
 
-- 第一版为非沙盒本机应用，未公证、未上架，不提供跨机器分发保证。
-- ad-hoc 签名的应用重建或移动后，系统可能要求重新授予辅助功能权限。
-- 单次操作等待修饰键释放最多一秒；目标应用或剪贴板变化则取消，不自动重试。
-- 剪贴板读写没有系统级比较并交换接口；最终检查与写入之间仍有极小的外部进程竞争窗口。
-- 写入失败，或写入后目标应用/权限立即改变时，可能已移除原格式，但不会自动恢复或重试。
-- 优先读取纯文本表示；仅 RTF 的内容可提取文本。HTML-only 且没有文本表示的内容不做 HTML 解析。
-- 输入框、远程桌面、特殊安全输入场景是否接收模拟按键，以实际验证为准。
-
-项目约定见 [项目方案](docs/project-plan.md)，验证情况见 [验证记录](docs/verification.md)。
+Built with SwiftUI, AppKit, and [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts).
