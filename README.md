@@ -59,7 +59,7 @@ The app currently uses ad-hoc signing and is **not Apple-notarized**. macOS may 
 
 ### 2. Allow Accessibility access
 
-Settings opens whenever you launch or reopen the app. **The app interface is currently in Simplified Chinese**; this README’s language switch changes the documentation only.
+Settings opens whenever you manually launch or reopen the app. Launching at login keeps it in the background. **The app interface is currently in Simplified Chinese**; this README’s language switch changes the documentation only.
 
 1. Click **请求授权** (Request permission) in the app.
 2. Open **System Settings → Privacy & Security → Accessibility** and enable **Just Pure Paste**. Add the `.app` manually if it is missing.
@@ -76,13 +76,17 @@ Use the menu bar’s clipboard icon → **设置…** (Settings) to change the s
 
 Closing Settings leaves the app running. Command-dragging the menu bar icon away only hides it; the hotkey keeps working, and the hidden state persists across launches. Open the app again to show Settings, where **在菜单栏显示图标** restores the icon. To stop the app, choose **退出 Just Pure Paste** (Quit) from the menu bar or press ⌘Q in Settings.
 
+## Launch at login
+
+**登录时自动启动** (Launch at login) is enabled on first run so the app runs in the background when you log in, without opening Settings. Turn the toggle off to unregister; subsequent launches preserve your choice. If approval is required, click **打开登录项设置** (Open Login Items Settings) and allow the app in System Settings. The app refreshes the actual status when you return.
+
 ## Updates
 
 Automatic checks are enabled by default: the app checks on its first run, then when at least **24 hours** have passed since the last request while it is running. You can turn this off in Settings and still use **检查更新** (Check for updates) manually. Manual requests are limited to once a minute; request times and discovered updates persist across restarts.
 
 Only public, stable releases from this repository are checked. When a newer version is found, the menu bar icon changes to a download indicator and offers the release page. **Downloads and installation are manual.** Failed checks only update the status; they do not interrupt pasting.
 
-Update requests contain no account token, clipboard content, or records of which apps you use. There is no clipboard history, cloud sync, or launch-at-login feature.
+Update requests contain no account token, clipboard content, or records of which apps you use. There is no clipboard history or cloud sync.
 
 ## Build from source
 

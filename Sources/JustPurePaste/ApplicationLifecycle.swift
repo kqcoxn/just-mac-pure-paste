@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        model.launchAtLogin.enableByDefaultIfNeeded()
         _ = menuBar
         let mainMenu = NSMenu()
         let appItem = NSMenuItem()
@@ -38,7 +39,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appItem.submenu = appMenu
         mainMenu.addItem(appItem)
         NSApplication.shared.mainMenu = mainMenu
-        showSettings()
+        if !Self.isLoginItemLaunch(NSAppleEventManager.shared().currentAppleEvent) {
+            showSettings()
+        }
+    }
+
+    static func isLoginItemLaunch(_ event: NSAppleEventDescriptor?) -> Bool {
+        event?.eventID == kAEOpenApplication
+            && event?.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
     }
 
     @objc func showSettings() {

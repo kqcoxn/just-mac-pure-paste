@@ -13,6 +13,7 @@ extension KeyboardShortcuts.Name {
 @Observable
 final class AppModel {
     let permission = PermissionService()
+    let launchAtLogin = LaunchAtLoginService()
     let updates = UpdateService(currentVersion:
         Bundle.main.object(forInfoDictionaryKey: "JPPReleaseTag") as? String
         ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
@@ -90,6 +91,7 @@ struct SettingsView: View {
                     get: { menuBar.isVisible },
                     set: { menuBar.setVisible($0) }
                 ))
+                LaunchAtLoginSettingsView(service: model.launchAtLogin)
                 GroupBox("全局快捷键") {
                     VStack(alignment: .leading, spacing: 12) {
                         KeyboardShortcuts.Recorder("纯文本粘贴", name: .purePaste) { _ in
@@ -145,8 +147,35 @@ struct SettingsView: View {
         .task {
             // This task never reads the clipboard. Refresh while this settings window is active.
             while !Task.isCancelled {
-                if NSApplication.shared.isActive { model.permission.refresh() }
+                if NSApplication.shared.isActive {
+                    model.permission.refresh()
+                    model.launchAtLogin.refresh()
+                }
                 do { try await Task.sleep(nanoseconds: 1_000_000_000) } catch { return }
+            }
+        }
+    }
+}
+
+private struct LaunchAtLoginSettingsView: View {
+    @Bindable var service: LaunchAtLoginService
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle("登录时自动启动", isOn: $service.isEnabled)
+            Text("登录 Mac 后在后台运行，不弹出设置窗口。")
+                .font(.caption).foregroundStyle(.secondary)
+            if service.status == .requiresApproval {
+                Text("请在系统设置的登录项中允许 Just Pure Paste 自动启动。")
+                    .font(.caption).foregroundStyle(.orange)
+                Button("打开登录项设置") { service.openSystemSettings() }
+            }
+            if service.status == .notFound {
+                Text("无法找到应用，请将完整的 App 移至“应用程序”后重新打开。")
+                    .font(.caption).foregroundStyle(.orange)
+            }
+            if let error = service.errorMessage {
+                Text(error).font(.caption).foregroundStyle(.red).textSelection(.enabled)
             }
         }
     }
